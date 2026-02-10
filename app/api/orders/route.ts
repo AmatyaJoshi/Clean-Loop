@@ -114,10 +114,18 @@ export async function POST(request: NextRequest) {
     // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Get the first active outlet (in production, use location-based logic)
-    const outlet = await prisma.outlet.findFirst({
+    // Match outlet by city from pickup address
+    const pickupCity = validatedData.pickupAddress.city.toLowerCase().trim();
+    const allOutlets = await prisma.outlet.findMany({
       where: { isActive: true }
     });
+    const outlet = allOutlets.find((o) => {
+      let addr = o.address as any;
+      if (typeof addr === "string") {
+        try { addr = JSON.parse(addr); } catch { return false; }
+      }
+      return addr?.city?.toLowerCase().trim() === pickupCity;
+    }) || allOutlets[0];
 
     if (!outlet) {
       return NextResponse.json(

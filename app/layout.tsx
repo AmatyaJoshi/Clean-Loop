@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "./animations.css";
 import AuthProvider from "@/components/SessionProvider";
+import CityPicker from "@/components/CityPicker";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,7 +26,10 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CityPicker />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

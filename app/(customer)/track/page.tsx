@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Sparkles, Search, Package, CheckCircle2, Clock, Truck, Loader2, ArrowLeft,
-  MapPin, Phone, ShieldCheck, Timer, CircleDot, PackageCheck, Shirt,
+  MapPin, Phone, Mail, ShieldCheck, Timer, CircleDot, PackageCheck, Shirt,
   ChevronRight, AlertCircle, Calendar, ClipboardList, Star,
 } from "lucide-react";
 import { getOrderStatusColor } from "@/lib/utils";
@@ -120,7 +120,7 @@ function TrackContent() {
                     suppressHydrationWarning
                   />
                 </div>
-                <button type="submit" disabled={isLoading} suppressHydrationWarning className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-8 py-4 transition-colors disabled:bg-gray-300 flex items-center gap-2 shrink-0">
+                <button type="submit" disabled={isLoading} suppressHydrationWarning className="bg-gray-900 hover:bg-black text-white font-semibold px-8 py-4 transition-colors disabled:bg-gray-300 flex items-center gap-2 shrink-0">
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Track <ChevronRight className="w-4 h-4" /></>}
                 </button>
               </div>
@@ -374,12 +374,25 @@ function TrackContent() {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{tracking.outlet.name}</p>
-                  {tracking.outlet.contactDetails && (
-                    <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
-                      <Phone className="w-3 h-3" />
-                      {typeof tracking.outlet.contactDetails === "object" ? tracking.outlet.contactDetails.phone : tracking.outlet.contactDetails}
-                    </p>
-                  )}
+                  {tracking.outlet.contactDetails && (() => {
+                    const details = typeof tracking.outlet.contactDetails === "string" ? JSON.parse(tracking.outlet.contactDetails) : tracking.outlet.contactDetails;
+                    return (
+                      <div className="space-y-0.5 mt-0.5">
+                        {details.phone && (
+                          <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            +{details.phone}
+                          </p>
+                        )}
+                        {details.email && (
+                          <p className="text-sm text-gray-500 flex items-center gap-1">
+                            <Mail className="w-3 h-3" />
+                            {details.email}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

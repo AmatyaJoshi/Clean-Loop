@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
 import CountUp from "@/components/CountUp";
 import CustomerChatbot from "@/components/CustomerChatbot";
+import { CityDisplay } from "@/components/CityPicker";
 
 export default function Home() {
   return (
@@ -16,6 +17,9 @@ export default function Home() {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold bg-linear-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">CleanLoop</h1>
+            <div className="hidden md:block border-l border-gray-200 pl-3 ml-1">
+              <CityDisplay />
+            </div>
           </div>
           <nav className="hidden md:flex items-center gap-8">
             <Link href="/services" className="text-gray-700 hover:text-emerald-600 font-medium transition-all duration-300 hover:scale-105">Services</Link>
@@ -51,7 +55,7 @@ export default function Home() {
               <Link href="/order">Schedule Pickup</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-2 border-gray-300 hover:border-emerald-600 hover:text-emerald-600 text-lg px-10 h-14">
-              <Link href="/pricing">View Pricing</Link>
+              <Link href="/membership">View Pricing</Link>
             </Button>
           </div>
 
