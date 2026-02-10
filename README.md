@@ -690,7 +690,6 @@ cleanloop/
 |   |-- MonicaChatbot.tsx             # Admin AI chat widget
 |   |-- CountUp.tsx                   # Animated number counter
 |   |-- SessionProvider.tsx           # NextAuth session wrapper
-|   |-- StripeCheckout.tsx            # Stripe integration (reserved)
 |
 |-- lib/                              # Shared utilities
 |   |-- prisma.ts                     # Prisma client singleton
