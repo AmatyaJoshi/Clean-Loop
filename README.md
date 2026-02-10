@@ -2,7 +2,7 @@
 
 **Enterprise Laundry Operations Platform**
 
-Live deployment: [https://cleanloop.vercel.app](https://cleanloop.vercel.app)
+Live deployment: [https://clean-loop-seven.vercel.app/](https://clean-loop-seven.vercel.app/)
 
 ---
 
