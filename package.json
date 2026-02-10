@@ -20,7 +20,6 @@
     "@auth/prisma-adapter": "^2.11.1",
     "@hookform/resolvers": "^5.2.2",
     "@huggingface/inference": "^4.13.11",
-    "@next/font": "^14.2.15",
     "@prisma/client": "^5.22.0",
     "appwrite": "^22.0.0",
     "bcryptjs": "^3.0.3",
