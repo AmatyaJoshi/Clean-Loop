@@ -1,0 +1,383 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  phone         String?   @unique
+  role          String    @default("customer") 
+  // Roles (portal = can access CleanLoop admin portal):
+  // - customer: Regular customer (no portal access)
+  // - business_client: Business customer (no portal access)
+  // - staff: Portal – processes orders, deliveries
+  // - outlet_manager: Portal – supervises staff, manages outlet
+  // - admin: Portal – manages operations; can add team members
+  // - owner: Portal – full access; can add team members
+  // - super_admin: Portal – full access (optional)
+  
+  customer      Customer?
+  staff         Staff?
+  lastLoginAt   DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("user")
+}
+
+model Organization {
+  id               String   @id @default(cuid())
+  name             String
+  subscriptionTier String   @default("basic") // basic, pro, enterprise
+  status           String   @default("active") // active, inactive, suspended
+  settings         Json     @default("{}")
+  
+  outlets          Outlet[]
+  customers        Customer[]
+  services         Service[]
+  orders           Order[]
+  payments         Payment[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("organization")
+}
+
+model Outlet {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name            String
+  code            String   @unique
+  address         Json     // {street, city, state, zipCode, country}
+  geolocation     Json     // {lat, lng}
+  capacityPerDay  Int      @default(100)
+  operatingHours  Json     // {monday: {open, close, isOpen}, ...}
+  contactDetails  Json     // {phone, email}
+  isActive        Boolean  @default(true)
+  
+  orders          Order[]
+  staff           Staff[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("outlet")
+}
+
+model Customer {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  customerCode        String   @unique
+  addresses           Json     @default("[]") // Array of addresses
+  defaultAddressIndex Int      @default(0)
+  loyaltyPoints       Int      @default(0)
+  totalOrders         Int      @default(0)
+  lifetimeValue       Decimal  @default(0) @db.Decimal(10, 2)
+  preferences         Json     @default("{}")
+  tags                Json     @default("[]")
+  
+  orders              Order[]
+  payments            Payment[]
+  memberships         CustomerMembership[]
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("customer")
+}
+
+model Staff {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outletId   String
+  outlet     Outlet   @relation(fields: [outletId], references: [id], onDelete: Cascade)
+  
+  position   String   // manager, cleaner, delivery_agent
+  isActive   Boolean  @default(true)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([outletId])
+  @@index([isActive])
+  @@map("staff")
+}
+
+model ServiceCategory {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  iconUrl        String?
+  displayOrder   Int
+  isActive       Boolean   @default(true)
+  
+  services       Service[]
+  
+  createdAt      DateTime  @default(now())
+
+  @@map("servicecategory")
+}
+
+model Service {
+  id                  String          @id @default(cuid())
+  organizationId      String
+  organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId          String
+  category            ServiceCategory @relation(fields: [categoryId], references: [id])
+  
+  name                String
+  code                String          @unique
+  description         String?
+  basePrice           Decimal         @db.Decimal(10, 2)
+  processingTimeHours Int
+  isExpressAvailable  Boolean         @default(false)
+  expressMultiplier   Decimal         @default(1.5) @db.Decimal(3, 2)
+  unit                String          @default("piece") // piece, kg, set
+  isActive            Boolean         @default(true)
+  
+  orderItems          OrderItem[]
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@map("service")
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderNumber           String      @unique
+  customerId            String
+  customer              Customer    @relation(fields: [customerId], references: [id])
+  outletId              String
+  outlet                Outlet      @relation(fields: [outletId], references: [id])
+  
+  status                String      @default("pending") // pending, confirmed, picked_up, in_progress, quality_check, ready, out_for_delivery, delivered, cancelled
+  priority              String      @default("normal") // normal, express, urgent
+  
+  subtotal              Decimal     @db.Decimal(10, 2)
+  taxAmount             Decimal     @default(0) @db.Decimal(10, 2)
+  discountAmount        Decimal     @default(0) @db.Decimal(10, 2)
+  deliveryCharges       Decimal     @default(0) @db.Decimal(10, 2)
+  totalAmount           Decimal     @db.Decimal(10, 2)
+  
+  pickupScheduledAt     DateTime?
+  pickupCompletedAt     DateTime?
+  deliveryScheduledAt   DateTime?
+  deliveryCompletedAt   DateTime?
+  expectedCompletionAt  DateTime?
+  
+  pickupAddress         Json
+  deliveryAddress       Json
+  
+  specialInstructions   String?
+  customerNotes         String?
+  internalNotes         String?
+  metadata              Json        @default("{}")
+  statusHistory         Json        @default("[]")
+  
+  items                 OrderItem[]
+  payments              Payment[]
+  
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([status])
+  @@index([outletId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([outletId, status])
+  @@map("order")
+}
+
+model OrderItem {
+  id              String   @id @default(cuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         Service  @relation(fields: [serviceId], references: [id])
+  
+  itemName        String
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  totalPrice      Decimal  @db.Decimal(10, 2)
+  
+  garmentDetails  Json     @default("{}")
+  beforeImages    Json     @default("[]")
+  afterImages     Json     @default("[]")
+  status          String   @default("pending")
+  barcode         String?  @unique
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("orderitem")
+}
+
+model Payment {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  orderId         String?
+  order           Order?       @relation(fields: [orderId], references: [id])
+  customerId      String
+  customer        Customer     @relation(fields: [customerId], references: [id])
+  membershipId    String?
+  membership      CustomerMembership? @relation(fields: [membershipId], references: [id])
+  
+  amount          Decimal      @db.Decimal(10, 2)
+  paymentMethod   String       // card, upi, cash, cod, wallet, net_banking
+  paymentGateway  String       @default("manual") // manual, stripe (we'll keep stripe for future)
+  transactionId   String?
+  stripePaymentIntentId String? @unique
+  upiTransactionId String?
+  
+  status          String       @default("pending") // pending, verified, completed, failed, refunded
+  paidAt          DateTime?
+  verifiedAt      DateTime?
+  verifiedBy      String?      // Admin user ID who verified the payment
+  
+  gatewayResponse Json         @default("{}")
+  metadata        Json         @default("{}")
+  
+  paymentProofs   PaymentProof[]
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([status])
+  @@index([paidAt])
+  @@index([status, paidAt])
+  @@index([orderId])
+  @@index([customerId])
+  @@map("payment")
+}
+
+model PaymentProof {
+  id              String   @id @default(cuid())
+  paymentId       String
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  
+  fileUrl         String   // Appwrite file URL
+  fileId          String   // Appwrite file ID
+  fileName        String
+  fileType        String   // image/png, image/jpeg, application/pdf
+  fileSize        Int      // in bytes
+  
+  uploadedAt      DateTime @default(now())
+
+  @@map("paymentproof")
+}
+
+model MembershipPlan {
+  id                  String    @id @default(cuid())
+  name                String    @unique // Basic, Premium, Elite, Business
+  description         String
+  priceMonthly        Decimal   @db.Decimal(10, 2)
+  priceYearly         Decimal   @db.Decimal(10, 2)
+  features            Json      // Array of feature strings
+  discountPercentage  Int       // Discount on orders
+  freePickupDelivery  Boolean   @default(false)
+  prioritySupport     Boolean   @default(false)
+  maxOrders           Int?      // Max orders per month, null for unlimited
+  isActive            Boolean   @default(true)
+  displayOrder        Int
+  
+  memberships         CustomerMembership[]
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@map("membershipplan")
+}
+
+model CustomerMembership {
+  id              String          @id @default(cuid())
+  customerId      String
+  customer        Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  planId          String
+  plan            MembershipPlan  @relation(fields: [planId], references: [id])
+  
+  status          String          @default("pending") // pending, active, expired, cancelled
+  billingCycle    String          // monthly, yearly
+  startDate       DateTime?
+  expiryDate      DateTime?
+  autoRenew       Boolean         @default(false)
+  
+  payments        Payment[]
+  transactions    MembershipTransaction[]
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([customerId, planId])
+  @@map("customermembership")
+}
+
+model MembershipTransaction {
+  id              String             @id @default(cuid())
+  membershipId    String
+  membership      CustomerMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  
+  type            String             // purchase, renewal, upgrade, downgrade, cancellation
+  amount          Decimal            @db.Decimal(10, 2)
+  status          String             @default("pending") // pending, completed, failed
+  description     String
+  metadata        Json               @default("{}")
+  
+  createdAt       DateTime           @default(now())
+
+  @@map("membershiptransaction")
+}
+
+model UpiAccount {
+  id              String   @id @default(cuid())
+  organizationId  String
+  
+  upiId           String   @unique
+  name            String
+  qrCodeUrl       String?  // Static QR code image URL
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("upiaccount")
+}
+
+// Precomputed metrics summary table — refreshed periodically
+// Avoids scanning 375K+ rows of heavy Order/Payment data on every dashboard load
+model MetricsSummary {
+  id          String   @id @default("singleton") // Only ever one row
+  payload     Json     // Full metrics JSON blob
+  refreshedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("metricssummary")
+}
+
+
