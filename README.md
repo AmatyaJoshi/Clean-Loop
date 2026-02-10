@@ -5,6 +5,11 @@
 Live deployment: [https://clean-loop-seven.vercel.app/](https://clean-loop-seven.vercel.app/)
 
 ---
+Admin Login- 
+              Username: admin@cleanloop.com
+              Password: admin123
+
+---
 
 ## Table of Contents
 
